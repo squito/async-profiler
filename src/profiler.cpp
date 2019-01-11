@@ -76,6 +76,10 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
         if (_hashes[i] == 0) {
             if (__sync_bool_compare_and_swap(&_hashes[i], 0, hash)) {
                 copyToFrameBuffer(num_frames, frames, &_traces[i]);
+                if (_args->_dump_immediate_trace) {
+                    char buf[1024];
+                    dumpTrace(std::cout, _traces[i], buf);
+                }
                 break;
             }
             continue;
@@ -84,6 +88,7 @@ int Profiler::storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counte
         if (++i == MAX_CALLTRACES) i = 0;  // move to next slot
         if (i == bucket) return 0;         // the table is full
     }
+
     
     // CallTrace hash found => atomically increment counter
     atomicInc(_traces[i]._samples);
@@ -672,33 +677,36 @@ void Profiler::dumpTraces(std::ostream& out, int max_traces) {
     MutexLocker ml(_state_lock);
     if (_state != IDLE || _engine == NULL) return;
 
-    FrameName fn(false, false, true, _thread_names_lock, _thread_names);
-    double percent = 100.0 / _total_counter;
     char buf[1024];
 
     qsort(_traces, MAX_CALLTRACES, sizeof(CallTraceSample), CallTraceSample::comparator);
     if (max_traces > MAX_CALLTRACES) max_traces = MAX_CALLTRACES;
 
     for (int i = 0; i < max_traces; i++) {
-        CallTraceSample& trace = _traces[i];
-        if (trace._samples == 0) break;
-
-        snprintf(buf, sizeof(buf), "--- %lld %s (%.2f%%), %lld sample%s\n",
-                 trace._counter, _engine->units(), trace._counter * percent,
-                 trace._samples, trace._samples == 1 ? "" : "s");
-        out << buf;
-
-        if (trace._num_frames == 0) {
-            out << "  [ 0] [frame_buffer_overflow]\n";
-        }
-
-        for (int j = 0; j < trace._num_frames; j++) {
-            const char* frame_name = fn.name(_frame_buffer[trace._start_frame + j]);
-            snprintf(buf, sizeof(buf), "  [%2d] %s\n", j, frame_name);
-            out << buf;
-        }
-        out << "\n";
+        dumpTrace(out, _traces[i], buf);
     }
+}
+
+void Profiler::dumpTrace(std::ostream& out, CallTraceSample& trace, char* buf) {
+    if (trace._samples == 0) return;
+    FrameName fn(false, false, true, _thread_names_lock, _thread_names);
+    double percent = 100.0 / _total_counter;
+
+    snprintf(buf, sizeof(buf), "--- %lld %s (%.2f%%), %lld sample%s\n",
+             trace._counter, _engine->units(), trace._counter * percent,
+             trace._samples, trace._samples == 1 ? "" : "s");
+    out << buf;
+
+    if (trace._num_frames == 0) {
+        out << "  [ 0] [frame_buffer_overflow]\n";
+    }
+
+    for (int j = 0; j < trace._num_frames; j++) {
+        const char* frame_name = fn.name(_frame_buffer[trace._start_frame + j]);
+        snprintf(buf, sizeof(buf), "  [%2d] %s\n", j, frame_name);
+        out << buf;
+    }
+    out << "\n";
 }
 
 void Profiler::dumpFlat(std::ostream& out, int max_methods) {
@@ -728,6 +736,7 @@ void Profiler::dumpFlat(std::ostream& out, int max_methods) {
 }
 
 void Profiler::runInternal(Arguments& args, std::ostream& out) {
+    _args = &args;
     switch (args._action) {
         case ACTION_START: {
             Error error = start(args);

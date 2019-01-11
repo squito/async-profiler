@@ -94,6 +94,7 @@ class Arguments {
     bool _dump_tree;
     bool _dump_jfr;
     bool _dump_summary;
+    bool _dump_immediate_trace;
     int _dump_traces;
     int _dump_flat;
     // FlameGraph parameters
@@ -120,6 +121,7 @@ class Arguments {
         _dump_tree(false),
         _dump_jfr(false),
         _dump_summary(false),
+	_dump_immediate_trace(false),
         _dump_traces(0),
         _dump_flat(0),
         _title("Flame Graph"),

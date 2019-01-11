@@ -116,6 +116,7 @@ class Profiler {
     FlightRecorder _jfr;
     Engine* _engine;
     time_t _start_time;
+    Arguments* _args;
 
     u64 _total_samples;
     u64 _total_counter;
@@ -160,6 +161,7 @@ class Profiler {
     bool addressInCode(const void* pc);
     u64 hashCallTrace(int num_frames, ASGCT_CallFrame* frames);
     int storeCallTrace(int num_frames, ASGCT_CallFrame* frames, u64 counter);
+    void dumpTrace(std::ostream& out, CallTraceSample& trace, char* buf);
     void copyToFrameBuffer(int num_frames, ASGCT_CallFrame* frames, CallTraceSample* trace);
     u64 hashMethod(jmethodID method);
     void storeMethod(jmethodID method, jint bci, u64 counter);
