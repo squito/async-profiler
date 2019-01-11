@@ -41,6 +41,7 @@ const Error Error::OK(NULL);
 //     jfr           - dump events in Java Flight Recorder format
 //     summary       - dump profiling summary (number of collected samples of each type)
 //     traces[=N]    - dump top N call traces
+//     immediate_trace   - dump the trace as soon as it occurs
 //     flat[=N]      - dump top N methods (aka flat profile)
 //     interval=N    - sampling interval in ns (default: 10'000'000, i.e. 10 ms)
 //     jstackdepth=N - maximum Java stack depth (default: MAX_STACK_FRAMES)
@@ -102,6 +103,8 @@ Error Arguments::parse(const char* args) {
             _dump_summary = true;
         } else if (strcmp(arg, "traces") == 0) {
             _dump_traces = value == NULL ? INT_MAX : atoi(value);
+        } else if (strcmp(arg, "immediate_trace") == 0) {
+            _dump_immediate_trace = true;
         } else if (strcmp(arg, "flat") == 0) {
             _dump_flat = value == NULL ? INT_MAX : atoi(value);
         } else if (strcmp(arg, "interval") == 0) {
